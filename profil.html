@@ -4,139 +4,213 @@
 <meta charset="UTF-8">
 <title>Profil</title>
 <style>
-  body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; margin: 0; padding: 20px; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f3f4f6; margin: 0; padding: 20px;
+  }
   .container {
-    max-width: 500px; margin: auto; background: white; padding: 20px;
-    border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center;
+    max-width: 500px; margin: auto; background: white;
+    padding: 20px; border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
   }
   h2 { margin-bottom: 5px; }
-  p { color: #555; }
-  button {
-    padding: 8px 12px; margin: 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;
+  p { color: #555; margin-top: 0; }
+  .btn {
+    padding: 8px 12px; margin: 5px;
+    border: none; border-radius: 8px; cursor: pointer;
+    font-size: 14px;
   }
   .edit { background: #ffb703; color: white; }
+  .edit:hover { background: #e09b00; }
   .logout { background: #e63946; color: white; }
-  .postForm { margin-top: 15px; }
-  textarea { width: 100%; padding: 10px; resize: none; margin-bottom: 10px; }
-  .postItem { background: #f9f9f9; padding: 10px; border-radius: 8px; margin: 10px 0; text-align: left; }
-  .delete { background: #e63946; color: white; padding: 4px 8px; border-radius: 5px; cursor: pointer; }
+  .logout:hover { background: #c02631; }
+  .follow { background: #2563eb; color: white; }
+  .follow:hover { background: #1e4db7; }
+  .post-box {
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid #ddd; border-radius: 8px;
+  }
+  textarea {
+    width: 100%; padding: 8px; resize: none;
+    border: 1px solid #ccc; border-radius: 8px;
+  }
+  .post { 
+    border: 1px solid #ddd; border-radius: 8px;
+    padding: 10px; margin-top: 15px;
+  }
+  .delete-btn {
+    background: #ef4444; color: white;
+    border: none; padding: 5px 8px;
+    border-radius: 6px; font-size: 12px;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
-
 <div class="container">
   <h2 id="username"></h2>
   <p id="email"></p>
-  <p>Followers: <span id="followers"></span></p>
+  <p><strong>Followers:</strong> <span id="followers">0</span></p>
+
+  <div id="buttons"></div>
   
-  <div id="profileButtons"></div>
-  
-  <div id="postFormContainer"></div>
-  
+  <div id="postForm" style="display:none;" class="post-box">
+    <h3>Buat Postingan</h3>
+    <textarea id="postContent" maxlength="1000" placeholder="Tulis sesuatu..."></textarea>
+    <br><br>
+    <button class="btn follow" onclick="createPost()">Posting</button>
+  </div>
+
   <h3>Postingan</h3>
-  <div id="userPosts"></div>
+  <div id="posts"></div>
 </div>
 
 <script>
 let params = new URLSearchParams(window.location.search);
 let profileEmail = params.get("email");
-let loggedInUser = JSON.parse(localStorage.getItem("loggedInUser"));
 
-if (!profileEmail) {
+let loggedInUser = JSON.parse(localStorage.getItem("loggedInUser"));
+let users = JSON.parse(localStorage.getItem("users")) || [];
+let posts = JSON.parse(localStorage.getItem("posts")) || [];
+let follows = JSON.parse(localStorage.getItem("follows")) || {};
+
+let profileUser;
+
+if (profileEmail) {
+  profileUser = users.find(u => u.email === profileEmail);
+} else if (loggedInUser) {
+  profileUser = loggedInUser;
   profileEmail = loggedInUser.email;
 }
 
-let users = JSON.parse(localStorage.getItem("users")) || [];
-let profileUser = users.find(u => u.email === profileEmail);
-
 if (!profileUser) {
-  alert("User tidak ditemukan");
+  alert("Pengguna tidak ditemukan.");
   window.location.href = "home.html";
 }
 
+// Tampilkan data profil
 document.getElementById("username").textContent = profileUser.username;
 document.getElementById("email").textContent = profileUser.email;
-document.getElementById("followers").textContent = JSON.parse(localStorage.getItem("followers_" + profileUser.email)) || 0;
+document.getElementById("followers").textContent = profileUser.followers || 0;
 
-if (profileEmail === loggedInUser.email) {
-  document.getElementById("profileButtons").innerHTML = `
-    <button class="edit" onclick="editProfile()">Edit Profil</button>
-    <button class="logout" onclick="logout()">Logout</button>
+// Tombol sesuai kondisi
+let btns = document.getElementById("buttons");
+if (loggedInUser && loggedInUser.email === profileUser.email) {
+  btns.innerHTML = `
+    <button class="btn edit" onclick="editProfile()">Edit Profil</button>
+    <button class="btn logout" onclick="logout()">Logout</button>
   `;
-  document.getElementById("postFormContainer").innerHTML = `
-    <div class="postForm">
-      <textarea id="postText" maxlength="1000" placeholder="Tulis postinganmu..."></textarea>
-      <button onclick="addPost()">Post</button>
-    </div>
+  document.getElementById("postForm").style.display = "block";
+} else if (loggedInUser) {
+  let followed = follows[loggedInUser.email]?.includes(profileUser.email);
+  btns.innerHTML = `
+    <button class="btn follow" onclick="toggleFollow()">
+      ${followed ? "Followed" : "Follow"}
+    </button>
   `;
 }
 
+// Load postingan user ini
+function loadUserPosts() {
+  let userPosts = posts.filter(p => p.email === profileUser.email);
+  let postsContainer = document.getElementById("posts");
+  postsContainer.innerHTML = "";
+
+  if (userPosts.length === 0) {
+    postsContainer.innerHTML = "<p>Belum ada postingan.</p>";
+    return;
+  }
+
+  userPosts.forEach((post, index) => {
+    let postDiv = document.createElement("div");
+    postDiv.className = "post";
+    postDiv.innerHTML = `
+      <p>${post.content}</p>
+      ${loggedInUser && loggedInUser.email === profileUser.email 
+        ? `<button class="delete-btn" onclick="deletePost(${index})">Hapus</button>` 
+        : ""}
+    `;
+    postsContainer.appendChild(postDiv);
+  });
+}
+
+// Buat postingan
+function createPost() {
+  let content = document.getElementById("postContent").value.trim();
+  if (content.length === 0) {
+    alert("Isi postingan tidak boleh kosong.");
+    return;
+  }
+
+  posts.push({
+    email: loggedInUser.email,
+    username: loggedInUser.username,
+    content: content
+  });
+
+  localStorage.setItem("posts", JSON.stringify(posts));
+  document.getElementById("postContent").value = "";
+  loadUserPosts();
+}
+
+// Hapus postingan
+function deletePost(index) {
+  let userPosts = posts.filter(p => p.email === profileUser.email);
+  let postToDelete = userPosts[index];
+  posts = posts.filter(p => !(p.email === postToDelete.email && p.content === postToDelete.content));
+  localStorage.setItem("posts", JSON.stringify(posts));
+  loadUserPosts();
+}
+
+// Edit nama profil
 function editProfile() {
   let newName = prompt("Masukkan nama baru:", profileUser.username);
   if (newName && newName.trim() !== "") {
     profileUser.username = newName.trim();
-    let index = users.findIndex(u => u.email === profileUser.email);
-    if (index !== -1) {
-      users[index].username = profileUser.username;
-      localStorage.setItem("users", JSON.stringify(users));
-    }
-    if (profileEmail === loggedInUser.email) {
-      localStorage.setItem("loggedInUser", JSON.stringify(profileUser));
-    }
+    users = users.map(u => u.email === profileUser.email ? profileUser : u);
+    localStorage.setItem("users", JSON.stringify(users));
+    localStorage.setItem("loggedInUser", JSON.stringify(profileUser));
     document.getElementById("username").textContent = profileUser.username;
     alert("Nama berhasil diperbarui!");
   }
 }
 
+// Logout
 function logout() {
   localStorage.removeItem("loggedInUser");
   window.location.href = "login.html";
 }
 
-function addPost() {
-  let text = document.getElementById("postText").value.trim();
-  if (!text) return;
-  let posts = JSON.parse(localStorage.getItem("posts")) || [];
-  posts.unshift({
-    username: profileUser.username,
-    email: profileUser.email,
-    text: text,
-    likes: 0
-  });
-  localStorage.setItem("posts", JSON.stringify(posts));
-  document.getElementById("postText").value = "";
-  loadUserPosts();
-}
+// Follow / Unfollow
+function toggleFollow() {
+  if (!loggedInUser) return;
 
-function deletePost(index) {
-  let posts = JSON.parse(localStorage.getItem("posts")) || [];
-  posts.splice(index, 1);
-  localStorage.setItem("posts", JSON.stringify(posts));
-  loadUserPosts();
-}
+  follows[loggedInUser.email] = follows[loggedInUser.email] || [];
+  let index = follows[loggedInUser.email].indexOf(profileUser.email);
 
-function loadUserPosts() {
-  let posts = JSON.parse(localStorage.getItem("posts")) || [];
-  let userPosts = posts
-    .map((post, idx) => ({...post, idx}))
-    .filter(p => p.email === profileUser.email);
+  if (index === -1) {
+    follows[loggedInUser.email].push(profileUser.email);
+    profileUser.followers = (profileUser.followers || 0) + 1;
+  } else {
+    follows[loggedInUser.email].splice(index, 1);
+    profileUser.followers = Math.max(0, (profileUser.followers || 0) - 1);
+  }
+
+  // Simpan perubahan
+  localStorage.setItem("follows", JSON.stringify(follows));
+  users = users.map(u => u.email === profileUser.email ? profileUser : u);
+  localStorage.setItem("users", JSON.stringify(users));
+  document.getElementById("followers").textContent = profileUser.followers;
   
-  let container = document.getElementById("userPosts");
-  container.innerHTML = "";
-  
-  userPosts.forEach(post => {
-    let div = document.createElement("div");
-    div.className = "postItem";
-    div.innerHTML = `
-      <strong>${post.username}</strong><br>${post.text}
-      ${profileEmail === loggedInUser.email ? `<div><span class="delete" onclick="deletePost(${post.idx})">Hapus</span></div>` : ""}
-    `;
-    container.appendChild(div);
-  });
+  // Update tombol
+  let followed = follows[loggedInUser.email]?.includes(profileUser.email);
+  btns.innerHTML = `<button class="btn follow" onclick="toggleFollow()">
+    ${followed ? "Followed" : "Follow"}
+  </button>`;
 }
 
 loadUserPosts();
 </script>
-
 </body>
 </html>
