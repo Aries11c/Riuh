@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Profil</title>
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f3f4f6; margin: 0; padding: 20px;
+  }
+  .container {
+    max-width: 400px; margin: auto; background: white;
+    padding: 20px; border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+  h2 { margin-bottom: 5px; }
+  p { color: #555; }
+  button {
+    padding: 10px 15px; margin: 5px;
+    border: none; border-radius: 8px; cursor: pointer;
+    font-size: 14px;
+  }
+  .edit { background: #ffb703; color: white; }
+  .edit:hover { background: #e09b00; }
+  .logout { background: #e63946; color: white; }
+  .logout:hover { background: #c02631; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h2 id="username"></h2>
+  <p id="email"></p>
+  <button class="edit" onclick="editProfile()">Edit Profil</button>
+  <button class="logout" onclick="logout()">Logout</button>
+</div>
+
+<script>
+let user = JSON.parse(localStorage.getItem("loggedInUser"));
+if (!user) {
+  window.location.href = "login.html";
+}
+
+document.getElementById("username").textContent = user.username;
+document.getElementById("email").textContent = user.email;
+
+function editProfile() {
+  let newName = prompt("Masukkan nama baru:", user.username);
+  if (newName && newName.trim() !== "") {
+    user.username = newName.trim();
+
+    // Update di localStorage users
+    let users = JSON.parse(localStorage.getItem("users")) || [];
+    let index = users.findIndex(u => u.email === user.email);
+    if (index !== -1) {
+      users[index].username = user.username;
+      localStorage.setItem("users", JSON.stringify(users));
+    }
+
+    // Update data user login
+    localStorage.setItem("loggedInUser", JSON.stringify(user));
+
+    document.getElementById("username").textContent = user.username;
+    alert("Nama berhasil diperbarui!");
+  }
+}
+
+function logout() {
+  localStorage.removeItem("loggedInUser");
+  window.location.href = "login.html";
+}
+</script>
+</body>
+</html>

@@ -12,21 +12,22 @@
     max-width: 600px; margin: auto; background: white;
     padding: 20px; border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    text-align: center;
   }
   h1 { color: #333; }
   button {
-    padding: 10px 15px; background: #e63946;
+    padding: 10px 15px; background: #2575fc;
     color: white; border: none; border-radius: 8px;
-    cursor: pointer;
+    cursor: pointer; font-size: 15px;
   }
-  button:hover { background: #c02631; }
+  button:hover { background: #1a5edb; }
 </style>
 </head>
 <body>
 <div class="container">
   <h1 id="welcome"></h1>
   <p>Ini adalah halaman utama sementara.</p>
-  <button onclick="logout()">Logout</button>
+  <button onclick="gotoProfile()">Ke Profil</button>
 </div>
 
 <script>
@@ -37,9 +38,8 @@ if (user) {
   window.location.href = "login.html";
 }
 
-function logout() {
-  localStorage.removeItem("loggedInUser");
-  window.location.href = "login.html";
+function gotoProfile() {
+  window.location.href = "profil.html";
 }
 </script>
 </body>
