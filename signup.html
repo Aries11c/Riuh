@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Sign Up</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 350px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      outline: none;
+      font-size: 14px;
+      transition: 0.2s;
+    }
+    input:focus {
+      border-color: #2575fc;
+      box-shadow: 0 0 5px rgba(37, 117, 252, 0.5);
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #2575fc;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #1a5edb;
+    }
+    p {
+      text-align: center;
+      font-size: 14px;
+    }
+    a {
+      color: #2575fc;
+      text-decoration: none;
+    }
+    .error { color: red; font-size: 14px; text-align: center; }
+    .success { color: green; font-size: 14px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Sign Up</h2>
+    <input type="text" id="username" placeholder="Username (max 15 huruf)" maxlength="15">
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password (min 6 huruf)">
+    <input type="password" id="confirmPassword" placeholder="Konfirmasi Password">
+    <button onclick="signup()">Daftar</button>
+    <p id="message"></p>
+    <p>Sudah
