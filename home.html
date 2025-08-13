@@ -2,45 +2,178 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Halaman Utama</title>
+<title>RIUH</title>
 <style>
-  body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #f3f4f6; margin: 0; padding: 20px;
+  body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; margin: 0; padding: 0; }
+  header {
+    background: white; padding: 10px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    position: sticky; top: 0;
   }
-  .container {
-    max-width: 600px; margin: auto; background: white;
-    padding: 20px; border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    text-align: center;
+  .riuh { font-weight: bold; color: #2575fc; font-size: 22px; }
+  .profile-btn { background: none; border: none; color: #2575fc; cursor: pointer; font-size: 15px; }
+  .container { max-width: 600px; margin: auto; padding: 20px; }
+  .post-box {
+    background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
   }
-  h1 { color: #333; }
+  textarea {
+    width: 100%; height: 80px; padding: 10px; margin-bottom: 10px;
+    border: 1px solid #ccc; border-radius: 8px; resize: none;
+  }
   button {
-    padding: 10px 15px; background: #2575fc;
-    color: white; border: none; border-radius: 8px;
-    cursor: pointer; font-size: 15px;
+    padding: 6px 12px; border: none; border-radius: 6px;
+    cursor: pointer; font-size: 14px;
   }
-  button:hover { background: #1a5edb; }
+  .submit-post { background: #2575fc; color: white; }
+  .submit-post:hover { background: #1a5edb; }
+  .post {
+    background: white; padding: 15px; border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px;
+  }
+  .username-link { color: #2575fc; font-weight: bold; cursor: pointer; text-decoration: none; }
+  .actions { margin-top: 10px; display: flex; gap: 10px; }
+  .like-btn, .follow-btn {
+    background: #e5e5e5; border-radius: 6px; padding: 4px 8px;
+  }
+  .like-btn:hover { background: #cbd5e1; }
+  .follow-btn:hover { background: #cbd5e1; }
+  .delete-btn {
+    background: #e63946; color: white; margin-left: auto;
+  }
+  .delete-btn:hover { background: #c02631; }
 </style>
 </head>
 <body>
+
+<header>
+  <div class="riuh">RIUH</div>
+  <button class="profile-btn" onclick="gotoProfile()">Profil</button>
+</header>
+
 <div class="container">
-  <h1 id="welcome"></h1>
-  <p>Ini adalah halaman utama sementara.</p>
-  <button onclick="gotoProfile()">Ke Profil</button>
+  <div class="post-box">
+    <textarea id="postText" placeholder="Apa yang sedang kamu pikirkan?" maxlength="1000"></textarea>
+    <button class="submit-post" onclick="addPost()">Posting</button>
+  </div>
+
+  <div id="feed"></div>
 </div>
 
 <script>
 let user = JSON.parse(localStorage.getItem("loggedInUser"));
-if (user) {
-  document.getElementById("welcome").textContent = "Halo, " + user.username + "!";
-} else {
-  window.location.href = "login.html";
-}
+if (!user) window.location.href = "login.html";
 
 function gotoProfile() {
   window.location.href = "profil.html";
 }
+
+function loadPosts() {
+  let posts = JSON.parse(localStorage.getItem("posts")) || [];
+  let feed = document.getElementById("feed");
+  feed.innerHTML = "";
+
+  posts.forEach(post => {
+    let div = document.createElement("div");
+    div.className = "post";
+    div.innerHTML = `
+      <div>
+        <a class="username-link" onclick="viewUser('${post.email}')">${post.username}</a>
+      </div>
+      <div>${post.text}</div>
+      <div class="actions">
+        <button class="like-btn" onclick="likePost(${post.id})">❤️ ${post.likes}</button>
+        <button class="follow-btn" onclick="followUser('${post.email}')">${isFollowing(post.email) ? "Followed" : "Follow"}</button>
+        ${post.email === user.email ? `<button class="delete-btn" onclick="deletePost(${post.id})">Hapus</button>` : ""}
+      </div>
+    `;
+    feed.prepend(div); // prepend biar postingan terbaru di atas
+  });
+}
+
+function addPost() {
+  let text = document.getElementById("postText").value.trim();
+  if (text.length === 0) {
+    alert("Teks tidak boleh kosong!");
+    return;
+  }
+  let posts = JSON.parse(localStorage.getItem("posts")) || [];
+  let newPost = {
+    id: Date.now(),
+    username: user.username,
+    email: user.email,
+    text: text,
+    likes: 0,
+    likedBy: []
+  };
+  posts.push(newPost);
+  localStorage.setItem("posts", JSON.stringify(posts));
+  document.getElementById("postText").value = "";
+  loadPosts();
+}
+
+function deletePost(id) {
+  let posts = JSON.parse(localStorage.getItem("posts")) || [];
+  posts = posts.filter(p => p.id !== id);
+  localStorage.setItem("posts", JSON.stringify(posts));
+  loadPosts();
+}
+
+function likePost(id) {
+  let posts = JSON.parse(localStorage.getItem("posts")) || [];
+  let post = posts.find(p => p.id === id);
+  if (!post.likedBy.includes(user.email)) {
+    post.likes++;
+    post.likedBy.push(user.email);
+  } else {
+    post.likes--;
+    post.likedBy = post.likedBy.filter(e => e !== user.email);
+  }
+  localStorage.setItem("posts", JSON.stringify(posts));
+  loadPosts();
+}
+
+function isFollowing(email) {
+  return user.following && user.following.includes(email);
+}
+
+function followUser(email) {
+  if (email === user.email) return; // tidak bisa follow diri sendiri
+
+  let users = JSON.parse(localStorage.getItem("users")) || [];
+  let target = users.find(u => u.email === email);
+  if (!target) return;
+
+  if (!user.following) user.following = [];
+  if (!target.followers) target.followers = 0;
+
+  if (isFollowing(email)) {
+    user.following = user.following.filter(e => e !== email);
+    target.followers--;
+  } else {
+    user.following.push(email);
+    target.followers++;
+  }
+
+  // Simpan perubahan
+  let idxCurrent = users.findIndex(u => u.email === user.email);
+  users[idxCurrent] = user;
+  let idxTarget = users.findIndex(u => u.email === email);
+  users[idxTarget] = target;
+
+  localStorage.setItem("users", JSON.stringify(users));
+  localStorage.setItem("loggedInUser", JSON.stringify(user));
+
+  loadPosts();
+}
+
+function viewUser(email) {
+  localStorage.setItem("viewProfile", email);
+  window.location.href = "profil.html";
+}
+
+loadPosts();
 </script>
 </body>
 </html>

@@ -4,23 +4,14 @@
 <meta charset="UTF-8">
 <title>Profil</title>
 <style>
-  body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #f3f4f6; margin: 0; padding: 20px;
-  }
+  body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; margin: 0; padding: 20px; }
   .container {
-    max-width: 400px; margin: auto; background: white;
-    padding: 20px; border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    text-align: center;
+    max-width: 400px; margin: auto; background: white; padding: 20px;
+    border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center;
   }
   h2 { margin-bottom: 5px; }
   p { color: #555; }
-  button {
-    padding: 10px 15px; margin: 5px;
-    border: none; border-radius: 8px; cursor: pointer;
-    font-size: 14px;
-  }
+  button { padding: 10px 15px; margin: 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
   .edit { background: #ffb703; color: white; }
   .edit:hover { background: #e09b00; }
   .logout { background: #e63946; color: white; }
@@ -31,39 +22,48 @@
 <div class="container">
   <h2 id="username"></h2>
   <p id="email"></p>
-  <button class="edit" onclick="editProfile()">Edit Profil</button>
+  <p><b>Followers:</b> <span id="followers">0</span></p>
+  <button class="edit" id="editBtn">Edit Profil</button>
   <button class="logout" onclick="logout()">Logout</button>
 </div>
 
 <script>
+let viewEmail = localStorage.getItem("viewProfile");
 let user = JSON.parse(localStorage.getItem("loggedInUser"));
-if (!user) {
-  window.location.href = "login.html";
+let users = JSON.parse(localStorage.getItem("users")) || [];
+let profileUser;
+
+if (!user) window.location.href = "login.html";
+
+if (viewEmail && viewEmail !== user.email) {
+  profileUser = users.find(u => u.email === viewEmail);
+  document.getElementById("editBtn").style.display = "none"; // sembunyikan edit kalau lihat orang lain
+} else {
+  profileUser = user;
+  localStorage.removeItem("viewProfile");
 }
 
-document.getElementById("username").textContent = user.username;
-document.getElementById("email").textContent = user.email;
+if (!profileUser) window.location.href = "home.html";
 
-function editProfile() {
-  let newName = prompt("Masukkan nama baru:", user.username);
+document.getElementById("username").textContent = profileUser.username;
+document.getElementById("email").textContent = profileUser.email;
+document.getElementById("followers").textContent = profileUser.followers || 0;
+
+document.getElementById("editBtn").onclick = function() {
+  let newName = prompt("Masukkan nama baru:", profileUser.username);
   if (newName && newName.trim() !== "") {
-    user.username = newName.trim();
+    profileUser.username = newName.trim();
+    let idx = users.findIndex(u => u.email === profileUser.email);
+    if (idx !== -1) users[idx] = profileUser;
+    localStorage.setItem("users", JSON.stringify(users));
 
-    // Update di localStorage users
-    let users = JSON.parse(localStorage.getItem("users")) || [];
-    let index = users.findIndex(u => u.email === user.email);
-    if (index !== -1) {
-      users[index].username = user.username;
-      localStorage.setItem("users", JSON.stringify(users));
+    if (profileUser.email === user.email) {
+      localStorage.setItem("loggedInUser", JSON.stringify(profileUser));
     }
-
-    // Update data user login
-    localStorage.setItem("loggedInUser", JSON.stringify(user));
-
-    document.getElementById("username").textContent = user.username;
+    document.getElementById("username").textContent = profileUser.username;
     alert("Nama berhasil diperbarui!");
   }
-}
+};
 
 function logout() {
   localStorage.removeItem("loggedInUser");
