@@ -1,138 +1,145 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>RIUH - Beranda</title>
 <style>
-  body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #f3f4f6;
-    margin: 0; padding: 0;
+  body { font-family: 'Segoe UI', sans-serif; background:#f3f4f6; margin:0 }
+  header{
+    position:sticky; top:0; background:#fff; display:flex; align-items:center;
+    gap:12px; padding:10px 16px; box-shadow:0 2px 5px rgba(0,0,0,.08); z-index:10
   }
-  header {
-    background: white;
-    padding: 10px 20px;
-    display: flex; align-items: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  }
-  header h1 {
-    color: #2575fc;
-    margin: 0;
-    flex-grow: 1;
-  }
-  header button {
-    background: #2575fc;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-  .container { max-width: 600px; margin: 20px auto; padding: 0 10px; }
-  .post {
-    background: white; padding: 15px; margin-bottom: 15px;
-    border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  }
-  .username {
-    font-weight: bold; color: #2575fc; cursor: pointer;
-  }
-  .actions button {
-    margin-right: 10px;
-    padding: 5px 10px; border: none; border-radius: 5px; cursor: pointer;
-  }
-  .like { background: #ff4757; color: white; }
-  .follow { background: #2ed573; color: white; }
-  .followed { background: gray; color: white; }
+  .brand{ font-weight:800; color:#2575fc; font-size:22px }
+  .spacer{ flex:1 }
+  .btn{ border:none; background:#2575fc; color:#fff; padding:8px 12px; border-radius:8px; cursor:pointer }
+  .wrap{ max-width:640px; margin:16px auto; padding:0 12px }
+  .post{ background:#fff; border-radius:12px; padding:14px; box-shadow:0 2px 8px rgba(0,0,0,.06); margin-bottom:14px }
+  .user{ font-weight:700; color:#2575fc; cursor:pointer }
+  .text{ white-space:pre-wrap; margin:6px 0 10px }
+  .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+  .chip{ border:none; background:#e5e7eb; padding:6px 10px; border-radius:8px; cursor:pointer }
+  .chip[disabled]{ opacity:.6; cursor:default }
+  .danger{ background:#ef4444; color:#fff }
 </style>
 </head>
 <body>
-
 <header>
-  <h1>RIUH</h1>
-  <button onclick="gotoProfile()">Profil</button>
+  <div class="brand">RIUH</div>
+  <div class="spacer"></div>
+  <button class="btn" id="btnMe">Profil</button>
 </header>
 
-<div class="container" id="postContainer"></div>
+<div class="wrap" id="feed"></div>
 
 <script>
-let loggedInUser = JSON.parse(localStorage.getItem("loggedInUser"));
-if (!loggedInUser) {
-  window.location.href = "login.html";
+const me = JSON.parse(localStorage.getItem("loggedInUser"));
+if(!me){ location.href="login.html"; }
+document.getElementById("btnMe").onclick = () => {
+  location.href = "profil.html?email=" + encodeURIComponent(me.email);
+};
+
+function getUsers(){ return JSON.parse(localStorage.getItem("users")) || []; }
+function getPosts(){ return JSON.parse(localStorage.getItem("posts")) || []; }
+function setPosts(p){ localStorage.setItem("posts", JSON.stringify(p)); }
+function getFollows(){ return JSON.parse(localStorage.getItem("follows")) || {}; }
+function setFollows(f){ localStorage.setItem("follows", JSON.stringify(f)); }
+
+function isFollowing(targetEmail){
+  const f = getFollows();
+  return (f[me.email] || []).includes(targetEmail);
+}
+function followOnce(targetEmail){
+  if(targetEmail === me.email) return; // tidak bisa follow diri sendiri
+  const f = getFollows();
+  const arr = f[me.email] || [];
+  if(!arr.includes(targetEmail)){
+    arr.push(targetEmail);
+    f[me.email] = arr;
+    setFollows(f);
+    render(); // refresh UI
+  }
+}
+function countFollowers(email){
+  const f = getFollows();
+  let n = 0;
+  for(const follower in f){
+    if((f[follower] || []).includes(email)) n++;
+  }
+  return n;
 }
 
-function gotoProfile() {
-  window.location.href = "profil.html?email=" + encodeURIComponent(loggedInUser.email);
+function likeToggle(postId){
+  const posts = getPosts();
+  const idx = posts.findIndex(p => p.id === postId);
+  if(idx === -1) return;
+  posts[idx].likedBy = posts[idx].likedBy || [];
+  posts[idx].likes = posts[idx].likes || 0;
+
+  const i = posts[idx].likedBy.indexOf(me.email);
+  if(i === -1){
+    posts[idx].likedBy.push(me.email);
+    posts[idx].likes++;
+  }else{
+    // jika tak ingin bisa un-like, comment 3 baris di bawah
+    posts[idx].likedBy.splice(i,1);
+    posts[idx].likes = Math.max(0, posts[idx].likes - 1);
+  }
+  setPosts(posts);
+  render();
 }
 
-function loadPosts() {
-  let posts = JSON.parse(localStorage.getItem("posts")) || [];
-  let postContainer = document.getElementById("postContainer");
-  postContainer.innerHTML = "";
+function deletePost(postId){
+  const posts = getPosts().filter(p => !(p.id === postId && p.email === me.email));
+  setPosts(posts);
+  render();
+}
 
-  posts.forEach((post, index) => {
-    let div = document.createElement("div");
-    div.className = "post";
-    div.innerHTML = `
-      <div class="username" onclick="viewProfile('${post.email}')">${post.username}</div>
-      <p>${post.text}</p>
-      <div class="actions">
-        <button class="like" onclick="likePost(${index})">Suka (${post.likes || 0})</button>
-        <button class="${isFollowing(post.email) ? 'followed' : 'follow'}" onclick="followUser('${post.email}')">
-          ${isFollowing(post.email) ? 'Followed' : 'Follow'} (${getFollowersCount(post.email)})
+function nameOf(email){
+  const u = getUsers().find(x => x.email === email);
+  return u ? u.username : email;
+}
+
+function render(){
+  const feed = document.getElementById("feed");
+  feed.innerHTML = "";
+  // terbaru di atas
+  const posts = getPosts().sort((a,b)=>b.id - a.id);
+
+  posts.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "post";
+    const uname = nameOf(p.email);
+    card.innerHTML = `
+      <div class="user" data-email="${p.email}">${uname}</div>
+      <div class="text">${p.text || p.content || ""}</div>
+      <div class="row">
+        <button class="chip" data-like="${p.id}">❤️ ${p.likes || 0}</button>
+        <button class="chip" data-follow="${p.email}" ${isFollowing(p.email) || p.email===me.email ? "disabled" : ""}>
+          ${p.email===me.email ? "Follow (disabled)" : (isFollowing(p.email) ? "Followed" : "Follow")}
         </button>
+        ${p.email===me.email ? `<button class="chip danger" data-del="${p.id}">Hapus</button>` : ""}
+        <span>Followers: ${countFollowers(p.email)}</span>
       </div>
     `;
-    postContainer.appendChild(div);
+    feed.appendChild(card);
   });
+
+  // Delegasi klik
+  feed.onclick = (e)=>{
+    const t = e.target;
+    if(t.dataset.email){ // klik username
+      location.href = "profil.html?email=" + encodeURIComponent(t.dataset.email);
+    }else if(t.dataset.like){
+      likeToggle(parseInt(t.dataset.like,10));
+    }else if(t.dataset.follow){
+      followOnce(t.dataset.follow);
+    }else if(t.dataset.del){
+      deletePost(parseInt(t.dataset.del,10));
+    }
+  };
 }
 
-function likePost(index) {
-  let posts = JSON.parse(localStorage.getItem("posts")) || [];
-  let likesKey = "likes_" + loggedInUser.email;
-  let likedPosts = JSON.parse(localStorage.getItem(likesKey)) || [];
-
-  if (!likedPosts.includes(index)) {
-    posts[index].likes = (posts[index].likes || 0) + 1;
-    likedPosts.push(index);
-    localStorage.setItem("posts", JSON.stringify(posts));
-    localStorage.setItem(likesKey, JSON.stringify(likedPosts));
-    loadPosts();
-  }
-}
-
-function followUser(email) {
-  if (email === loggedInUser.email) return;
-  let followKey = "follows_" + loggedInUser.email;
-  let follows = JSON.parse(localStorage.getItem(followKey)) || [];
-
-  if (!follows.includes(email)) {
-    follows.push(email);
-    localStorage.setItem(followKey, JSON.stringify(follows));
-
-    let followersKey = "followers_" + email;
-    let followers = JSON.parse(localStorage.getItem(followersKey)) || 0;
-    followers++;
-    localStorage.setItem(followersKey, JSON.stringify(followers));
-  }
-  loadPosts();
-}
-
-function isFollowing(email) {
-  let followKey = "follows_" + loggedInUser.email;
-  let follows = JSON.parse(localStorage.getItem(followKey)) || [];
-  return follows.includes(email);
-}
-
-function getFollowersCount(email) {
-  return JSON.parse(localStorage.getItem("followers_" + email)) || 0;
-}
-
-function viewProfile(email) {
-  window.location.href = "profil.html?email=" + encodeURIComponent(email);
-}
-
-loadPosts();
+render();
 </script>
-
 </body>
 </html>
