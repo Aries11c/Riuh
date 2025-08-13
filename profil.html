@@ -6,69 +6,137 @@
 <style>
   body { font-family: 'Segoe UI', sans-serif; background: #f3f4f6; margin: 0; padding: 20px; }
   .container {
-    max-width: 400px; margin: auto; background: white; padding: 20px;
+    max-width: 500px; margin: auto; background: white; padding: 20px;
     border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center;
   }
   h2 { margin-bottom: 5px; }
   p { color: #555; }
-  button { padding: 10px 15px; margin: 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  button {
+    padding: 8px 12px; margin: 5px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;
+  }
   .edit { background: #ffb703; color: white; }
-  .edit:hover { background: #e09b00; }
   .logout { background: #e63946; color: white; }
-  .logout:hover { background: #c02631; }
+  .postForm { margin-top: 15px; }
+  textarea { width: 100%; padding: 10px; resize: none; margin-bottom: 10px; }
+  .postItem { background: #f9f9f9; padding: 10px; border-radius: 8px; margin: 10px 0; text-align: left; }
+  .delete { background: #e63946; color: white; padding: 4px 8px; border-radius: 5px; cursor: pointer; }
 </style>
 </head>
 <body>
+
 <div class="container">
   <h2 id="username"></h2>
   <p id="email"></p>
-  <p><b>Followers:</b> <span id="followers">0</span></p>
-  <button class="edit" id="editBtn">Edit Profil</button>
-  <button class="logout" onclick="logout()">Logout</button>
+  <p>Followers: <span id="followers"></span></p>
+  
+  <div id="profileButtons"></div>
+  
+  <div id="postFormContainer"></div>
+  
+  <h3>Postingan</h3>
+  <div id="userPosts"></div>
 </div>
 
 <script>
-let viewEmail = localStorage.getItem("viewProfile");
-let user = JSON.parse(localStorage.getItem("loggedInUser"));
-let users = JSON.parse(localStorage.getItem("users")) || [];
-let profileUser;
+let params = new URLSearchParams(window.location.search);
+let profileEmail = params.get("email");
+let loggedInUser = JSON.parse(localStorage.getItem("loggedInUser"));
 
-if (!user) window.location.href = "login.html";
-
-if (viewEmail && viewEmail !== user.email) {
-  profileUser = users.find(u => u.email === viewEmail);
-  document.getElementById("editBtn").style.display = "none"; // sembunyikan edit kalau lihat orang lain
-} else {
-  profileUser = user;
-  localStorage.removeItem("viewProfile");
+if (!profileEmail) {
+  profileEmail = loggedInUser.email;
 }
 
-if (!profileUser) window.location.href = "home.html";
+let users = JSON.parse(localStorage.getItem("users")) || [];
+let profileUser = users.find(u => u.email === profileEmail);
+
+if (!profileUser) {
+  alert("User tidak ditemukan");
+  window.location.href = "home.html";
+}
 
 document.getElementById("username").textContent = profileUser.username;
 document.getElementById("email").textContent = profileUser.email;
-document.getElementById("followers").textContent = profileUser.followers || 0;
+document.getElementById("followers").textContent = JSON.parse(localStorage.getItem("followers_" + profileUser.email)) || 0;
 
-document.getElementById("editBtn").onclick = function() {
+if (profileEmail === loggedInUser.email) {
+  document.getElementById("profileButtons").innerHTML = `
+    <button class="edit" onclick="editProfile()">Edit Profil</button>
+    <button class="logout" onclick="logout()">Logout</button>
+  `;
+  document.getElementById("postFormContainer").innerHTML = `
+    <div class="postForm">
+      <textarea id="postText" maxlength="1000" placeholder="Tulis postinganmu..."></textarea>
+      <button onclick="addPost()">Post</button>
+    </div>
+  `;
+}
+
+function editProfile() {
   let newName = prompt("Masukkan nama baru:", profileUser.username);
   if (newName && newName.trim() !== "") {
     profileUser.username = newName.trim();
-    let idx = users.findIndex(u => u.email === profileUser.email);
-    if (idx !== -1) users[idx] = profileUser;
-    localStorage.setItem("users", JSON.stringify(users));
-
-    if (profileUser.email === user.email) {
+    let index = users.findIndex(u => u.email === profileUser.email);
+    if (index !== -1) {
+      users[index].username = profileUser.username;
+      localStorage.setItem("users", JSON.stringify(users));
+    }
+    if (profileEmail === loggedInUser.email) {
       localStorage.setItem("loggedInUser", JSON.stringify(profileUser));
     }
     document.getElementById("username").textContent = profileUser.username;
     alert("Nama berhasil diperbarui!");
   }
-};
+}
 
 function logout() {
   localStorage.removeItem("loggedInUser");
   window.location.href = "login.html";
 }
+
+function addPost() {
+  let text = document.getElementById("postText").value.trim();
+  if (!text) return;
+  let posts = JSON.parse(localStorage.getItem("posts")) || [];
+  posts.unshift({
+    username: profileUser.username,
+    email: profileUser.email,
+    text: text,
+    likes: 0
+  });
+  localStorage.setItem("posts", JSON.stringify(posts));
+  document.getElementById("postText").value = "";
+  loadUserPosts();
+}
+
+function deletePost(index) {
+  let posts = JSON.parse(localStorage.getItem("posts")) || [];
+  posts.splice(index, 1);
+  localStorage.setItem("posts", JSON.stringify(posts));
+  loadUserPosts();
+}
+
+function loadUserPosts() {
+  let posts = JSON.parse(localStorage.getItem("posts")) || [];
+  let userPosts = posts
+    .map((post, idx) => ({...post, idx}))
+    .filter(p => p.email === profileUser.email);
+  
+  let container = document.getElementById("userPosts");
+  container.innerHTML = "";
+  
+  userPosts.forEach(post => {
+    let div = document.createElement("div");
+    div.className = "postItem";
+    div.innerHTML = `
+      <strong>${post.username}</strong><br>${post.text}
+      ${profileEmail === loggedInUser.email ? `<div><span class="delete" onclick="deletePost(${post.idx})">Hapus</span></div>` : ""}
+    `;
+    container.appendChild(div);
+  });
+}
+
+loadUserPosts();
 </script>
+
 </body>
 </html>
