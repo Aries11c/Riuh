@@ -1,72 +1,94 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Login</title>
-<style>
-  body {
-    font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #2575fc, #6a11cb);
-    height: 100vh; display: flex; justify-content: center; align-items: center;
-    margin: 0;
-  }
-  .card {
-    background: white; padding: 25px; border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-    width: 100%; max-width: 350px;
-  }
-  h2 { text-align: center; color: #333; }
-  input {
-    width: 100%; padding: 10px; margin: 8px 0;
-    border: 1px solid #ccc; border-radius: 8px; font-size: 14px;
-  }
-  input:focus { border-color: #6a11cb; outline: none; }
-  button {
-    width: 100%; padding: 10px; background: #6a11cb;
-    color: white; border: none; border-radius: 8px;
-    cursor: pointer; font-size: 16px;
-  }
-  button:hover { background: #5011a3; }
-  p { text-align: center; font-size: 14px; }
-  a { color: #6a11cb; text-decoration: none; }
-  .error { color: red; font-size: 14px; text-align: center; }
-  .success { color: green; font-size: 14px; text-align: center; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 {
+            text-align: center;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007BFF;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .link {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .link a {
+            color: #007BFF;
+            text-decoration: none;
+        }
+        .link a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
-<div class="card">
-  <h2>Login</h2>
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
-  <button onclick="login()">Login</button>
-  <p id="message"></p>
-  <p>Belum punya akun? <a href="signup.html">Daftar</a></p>
-</div>
 
-<script>
-function login() {
-  let email = document.getElementById("email").value.trim();
-  let password = document.getElementById("password").value;
-  let message = document.getElementById("message");
+    <div class="container">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button onclick="login()">Login</button>
+        <div class="link">
+            Belum punya akun? <a href="signup.html">Daftar</a>
+        </div>
+    </div>
 
-  if (!email || !password) {
-    message.textContent = "Email dan password harus diisi!";
-    message.className = "error"; return;
-  }
+    <script>
+        function login() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
 
-  let users = JSON.parse(localStorage.getItem("users")) || [];
-  let user = users.find(u => u.email === email && u.password === password);
+            const users = JSON.parse(localStorage.getItem('users')) || [];
+            const user = users.find(u => u.username === username && u.password === password);
 
-  if (user) {
-    localStorage.setItem("loggedInUser", JSON.stringify(user));
-    message.textContent = "Login berhasil! Mengalihkan...";
-    message.className = "success";
-    setTimeout(() => { window.location.href = "home.html"; }, 1000);
-  } else {
-    message.textContent = "Email atau password salah!";
-    message.className = "error";
-  }
-}
-</script>
+            if (user) {
+                localStorage.setItem('loggedInUser', JSON.stringify(user));
+                window.location.href = "home.html";
+            } else {
+                alert("Username atau password salah!");
+            }
+        }
+    </script>
+
 </body>
 </html>
