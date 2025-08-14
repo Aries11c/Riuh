@@ -1,162 +1,150 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>RIUH - Home</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f2f2f2; margin: 0; padding: 0; }
-    header { background: white; padding: 10px; display: flex; align-items: center; border-bottom: 1px solid #ccc; position: sticky; top: 0; z-index: 10; }
-    header h1 { color: #2575fc; margin: 0 15px 0 0; cursor: pointer; }
-    header a { text-decoration: none; color: black; margin-left: auto; font-weight: bold; }
-    #posts { max-width: 700px; margin: 12px auto; padding: 0 10px; }
-    .post { background: white; padding: 12px; margin: 10px 0; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
-    .username { font-weight: bold; color: #2575fc; cursor: pointer; }
-    .text { white-space: pre-wrap; margin: 6px 0 10px; }
-    .actions button { margin-right: 8px; padding: 6px 10px; border: none; border-radius: 8px; cursor: pointer; background: #e5e7eb; }
-    .actions button:disabled { opacity: .6; cursor: default; }
-    .comments { margin-top: 10px; padding-left: 10px; border-left: 3px solid #ddd; }
-    .comment { margin-bottom: 6px; }
-    .comment strong { margin-right: 5px; color: #111; }
-    .comment button { border: none; background: #ef4444; color: white; padding: 2px 6px; border-radius: 6px; cursor: pointer; margin-left: 6px; }
-    .comment-input { display: flex; gap: 6px; margin-top: 6px; }
-    .comment-input input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px; }
-    .comment-input button { padding: 8px 12px; border: none; border-radius: 8px; background: #2575fc; color: white; cursor: pointer; }
-  </style>
+<meta charset="UTF-8">
+<title>RIUH - Beranda</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f5f5f5; }
+    header { background: #007bff; color: white; padding: 10px; display: flex; align-items: center; }
+    header h1 { margin: 0; font-size: 24px; }
+    header a { color: white; margin-left: 15px; text-decoration: none; font-weight: bold; }
+    .container { padding: 15px; }
+    .post { background: white; padding: 10px; margin-bottom: 15px; border-radius: 5px; }
+    .post h3 { margin: 0 0 5px; }
+    .post small { color: gray; }
+    .actions button { margin-right: 10px; }
+    .comments { margin-top: 10px; padding-left: 10px; border-left: 2px solid #ddd; }
+    .comment { background: #f0f0f0; padding: 5px; margin-bottom: 5px; border-radius: 3px; }
+</style>
 </head>
 <body>
-  <header>
-    <h1 onclick="goHome()">RIUH</h1>
-    <a href="#" id="profileLink">Profil</a>
-  </header>
-  <div id="posts"></div>
+
+<header>
+    <h1>RIUH</h1>
+    <a href="profil.html">Profil</a>
+</header>
+
+<div class="container" id="postsContainer"></div>
 
 <script>
-// ===== Utils Session (kompatibilitas currentUser -> loggedInUser) =====
-function getSessionUser() {
-  let u = JSON.parse(localStorage.getItem("loggedInUser"));
-  if (!u) {
-    const legacy = JSON.parse(localStorage.getItem("currentUser"));
-    if (legacy) {
-      localStorage.setItem("loggedInUser", JSON.stringify(legacy));
-      localStorage.removeItem("currentUser");
-      u = legacy;
+    // Cek login lebih aman
+    let currentUserRaw = localStorage.getItem("currentUser");
+    if (!currentUserRaw) {
+        window.location.href = "login.html";
     }
-  }
-  return u;
-}
-function clearSessionUser() {
-  localStorage.removeItem("loggedInUser");
-  localStorage.removeItem("currentUser");
-}
+    let currentUser;
+    try {
+        currentUser = JSON.parse(currentUserRaw);
+        if (!currentUser || !currentUser.email) throw "Invalid";
+    } catch {
+        window.location.href = "login.html";
+    }
 
-// ===== Helpers Storage =====
-function getUsers(){ return JSON.parse(localStorage.getItem("users")) || []; }
-function getPosts(){ return JSON.parse(localStorage.getItem("posts")) || []; }
-function setPosts(p){ localStorage.setItem("posts", JSON.stringify(p)); }
-function getFollows(){ return JSON.parse(localStorage.getItem("follows")) || {}; }
-function setFollows(f){ localStorage.setItem("follows", JSON.stringify(f)); }
-function getComments(){ return JSON.parse(localStorage.getItem("comments")) || {}; }
-function setComments(c){ localStorage.setItem("comments", JSON.stringify(c)); }
+    // Ambil data
+    let posts = JSON.parse(localStorage.getItem("posts") || "[]");
+    let comments = JSON.parse(localStorage.getItem("comments") || "{}");
+    let users = JSON.parse(localStorage.getItem("users") || "[]");
 
-const me = getSessionUser();
-if (!me) location.href = "login.html";
-document.getElementById("profileLink").href = `profil.html?email=${encodeURIComponent(me.email)}`;
+    function saveData() {
+        localStorage.setItem("posts", JSON.stringify(posts));
+        localStorage.setItem("comments", JSON.stringify(comments));
+        localStorage.setItem("users", JSON.stringify(users));
+    }
 
-function goHome(){ location.href = "home.html"; }
+    function renderPosts() {
+        const container = document.getElementById("postsContainer");
+        container.innerHTML = "";
+        posts.slice().reverse().forEach(post => {
+            let postUser = users.find(u => u.email === post.email);
+            let likes = post.likes || 0;
+            let likedBy = post.likedBy || [];
+            let isLiked = likedBy.includes(currentUser.email);
 
-function isFollowing(email){
-  const f = getFollows();
-  return (f[me.email] || []).includes(email);
-}
-function toggleFollow(email){
-  if (email === me.email) return;
-  const f = getFollows();
-  const my = f[me.email] || [];
-  const i = my.indexOf(email);
-  if (i === -1) my.push(email);
-  else my.splice(i, 1);
-  f[me.email] = my;
-  setFollows(f);
-  loadPosts();
-}
+            // follow status
+            let postOwner = users.find(u => u.email === post.email);
+            if (!postOwner.followers) postOwner.followers = [];
+            let isFollowing = postOwner.followers.includes(currentUser.email);
 
-function likePost(id){
-  const posts = getPosts();
-  const idx = posts.findIndex(p => String(p.id) === String(id));
-  if (idx === -1) return;
-  posts[idx].likers = posts[idx].likers || [];
-  posts[idx].likes = posts[idx].likes || 0;
-  if (!posts[idx].likers.includes(me.email)) {
-    posts[idx].likers.push(me.email);
-    posts[idx].likes++;
-    setPosts(posts);
-    loadPosts();
-  }
-}
+            // Post HTML
+            const postDiv = document.createElement("div");
+            postDiv.className = "post";
+            postDiv.innerHTML = `
+                <h3 style="cursor:pointer;color:#007bff" onclick="viewProfile('${post.email}')">${postUser.username}</h3>
+                <p>${post.text}</p>
+                <div class="actions">
+                    <button onclick="toggleLike('${post.id}')">${isLiked ? "Batal Suka" : "Suka"} (${likes})</button>
+                    ${post.email !== currentUser.email ? `<button onclick="toggleFollow('${post.email}')">${isFollowing ? "Followed" : "Follow"}</button>` : ""}
+                </div>
+                <div class="comments" id="comments-${post.id}"></div>
+                <input type="text" id="input-comment-${post.id}" placeholder="Tulis komentar..." maxlength="500">
+                <button onclick="addComment('${post.id}')">Kirim</button>
+            `;
 
-function addComment(postId){
-  const input = document.getElementById(`comment-${postId}`);
-  const text = (input.value || "").trim();
-  if (!text) return;
-  const all = getComments();
-  const pid = String(postId);
-  all[pid] = all[pid] || [];
-  all[pid].push({ user: me.username, email: me.email, text });
-  setComments(all);
-  input.value = "";
-  loadPosts();
-}
-function deleteComment(postId, index){
-  const all = getComments();
-  const pid = String(postId);
-  if (!all[pid]) return;
-  const c = all[pid][index];
-  if (!c || c.email !== me.email) return; // hanya boleh hapus komentar sendiri
-  all[pid].splice(index, 1);
-  setComments(all);
-  loadPosts();
-}
+            container.appendChild(postDiv);
+            renderComments(post.id);
+        });
+    }
 
-function viewProfile(email){ location.href = `profil.html?email=${encodeURIComponent(email)}`; }
+    function toggleLike(postId) {
+        let post = posts.find(p => p.id === postId);
+        if (!post.likedBy) post.likedBy = [];
+        if (post.likedBy.includes(currentUser.email)) {
+            post.likedBy = post.likedBy.filter(e => e !== currentUser.email);
+            post.likes--;
+        } else {
+            post.likedBy.push(currentUser.email);
+            post.likes++;
+        }
+        saveData();
+        renderPosts();
+    }
 
-function loadPosts() {
-  const posts = getPosts().sort((a,b)=> Number(b.id) - Number(a.id));
-  const comments = getComments();
-  const container = document.getElementById("posts");
-  container.innerHTML = "";
+    function toggleFollow(email) {
+        let targetUser = users.find(u => u.email === email);
+        if (!targetUser.followers) targetUser.followers = [];
+        if (targetUser.followers.includes(currentUser.email)) {
+            targetUser.followers = targetUser.followers.filter(e => e !== currentUser.email);
+        } else {
+            targetUser.followers.push(currentUser.email);
+        }
+        saveData();
+        renderPosts();
+    }
 
-  posts.forEach(post => {
-    const pid = String(post.id);
-    const div = document.createElement("div");
-    div.className = "post";
-    const uname = `<span class="username" onclick="viewProfile('${post.email}')">${post.username}</span>`;
-    div.innerHTML = `
-      ${uname}
-      <div class="text">${(post.text || "").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</div>
-      <div class="actions">
-        <button onclick="likePost('${pid}')">❤️ Suka (${post.likes || 0})</button>
-        <button onclick="toggleFollow('${post.email}')" ${post.email===me.email ? "disabled" : ""}>
-          ${post.email===me.email ? "Follow (disabled)" : (isFollowing(post.email) ? "Followed" : "Follow")}
-        </button>
-      </div>
-      <div class="comments" id="cwrap-${pid}">
-        ${(comments[pid] || []).map((c,i) => `
-          <div class="comment">
-            <strong>${c.user}</strong> ${c.text.replace(/</g,"&lt;").replace(/>/g,"&gt;")}
-            ${c.email === me.email ? `<button onclick="deleteComment('${pid}', ${i})">Hapus</button>` : ""}
-          </div>
-        `).join("")}
-        <div class="comment-input">
-          <input type="text" id="comment-${pid}" maxlength="500" placeholder="Tulis komentar...">
-          <button onclick="addComment('${pid}')">Kirim</button>
-        </div>
-      </div>
-    `;
-    container.appendChild(div);
-  });
-}
+    function addComment(postId) {
+        let input = document.getElementById("input-comment-" + postId);
+        let text = input.value.trim();
+        if (!text) return;
+        if (!comments[postId]) comments[postId] = [];
+        comments[postId].push({ user: currentUser.username, email: currentUser.email, text: text });
+        localStorage.setItem("comments", JSON.stringify(comments));
+        input.value = "";
+        renderComments(postId);
+    }
 
-loadPosts();
+    function renderComments(postId) {
+        let container = document.getElementById("comments-" + postId);
+        container.innerHTML = "";
+        (comments[postId] || []).forEach((c, index) => {
+            let commentDiv = document.createElement("div");
+            commentDiv.className = "comment";
+            commentDiv.innerHTML = `<strong>${c.user}</strong>: ${c.text} ${c.email === currentUser.email ? `<button onclick="deleteComment('${postId}',${index})">Hapus</button>` : ""}`;
+            container.appendChild(commentDiv);
+        });
+    }
+
+    function deleteComment(postId, index) {
+        comments[postId].splice(index, 1);
+        localStorage.setItem("comments", JSON.stringify(comments));
+        renderComments(postId);
+    }
+
+    function viewProfile(email) {
+        window.location.href = "profil.html?email=" + encodeURIComponent(email);
+    }
+
+    renderPosts();
 </script>
+
 </body>
 </html>
